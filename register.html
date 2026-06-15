@@ -1,0 +1,41 @@
+{# templates/register.html #} {% extends "base.html" %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow">
+      <div class="card-header bg-success text-white">
+        <h4 class="mb-0"><i class="fas fa-user-plus"></i> 注册新账号</h4>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          <div class="mb-3">
+            <label>用户名</label>
+            <input type="text" name="username" class="form-control" required />
+          </div>
+          <div class="mb-3">
+            <label>密码</label>
+            <input
+              type="password"
+              name="password"
+              class="form-control"
+              required
+            />
+          </div>
+          <div class="mb-3">
+            <label>确认密码</label>
+            <input
+              type="password"
+              name="confirm_password"
+              class="form-control"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-success w-100">立即注册</button>
+        </form>
+        <div class="mt-3 text-center">
+          已有账号？ <a href="{{ url_for('login') }}">去登录</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

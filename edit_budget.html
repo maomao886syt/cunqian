@@ -1,0 +1,292 @@
+{# templates/edit_budget.html #} {% extends "base.html" %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10 col-lg-8">
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+      <div
+        class="card-header bg-gradient-primary text-white py-3"
+        style="background: linear-gradient(135deg, #20bf55 0%, #01baef 100%)"
+      >
+        <h5 class="mb-0">
+          <i class="fas fa-sliders-h me-2"></i>定制你的存钱计划
+        </h5>
+        <small
+          >设置月收入、存钱目标，并分配各板块预算（总和建议等于可支配收入）</small
+        >
+      </div>
+      <div class="card-body p-4 bg-light">
+        <form method="POST" id="budgetForm">
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <label class="form-label fw-bold"
+                ><i class="fas fa-coins text-success me-1"></i>💰 月收入
+                (元)</label
+              >
+              <input
+                type="number"
+                step="0.01"
+                name="monthly_income"
+                id="monthly_income"
+                class="form-control form-control-lg rounded-pill"
+                value="{{ current_income }}"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold"
+                ><i class="fas fa-piggy-bank text-info me-1"></i>🏦 预计存钱
+                (元)</label
+              >
+              <input
+                type="number"
+                step="0.01"
+                name="savings_goal"
+                id="savings_goal"
+                class="form-control form-control-lg rounded-pill"
+                value="{{ current_savings }}"
+                required
+              />
+            </div>
+          </div>
+
+          <div
+            class="alert alert-primary rounded-4 border-0 shadow-sm"
+            id="disposableAlert"
+          >
+            <i class="fas fa-calculator me-2"></i>可支配金额 = 收入 - 存钱 =
+            <strong id="disposableAmount">0</strong> 元 <br /><small
+              class="text-muted"
+              >以下为各板块预算（可手动修改数值，总和建议不超过可支配收入）</small
+            >
+          </div>
+
+          <div class="row g-3 mb-4">
+            {% for cat in categories %}
+            <div class="col-md-6">
+              <div class="card budget-card h-100 border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                  <label class="form-label fw-bold">
+                    {% if cat == '饮食' %}<i
+                      class="fas fa-utensils text-success"
+                    ></i>
+                    {% elif cat == '交通' %}<i
+                      class="fas fa-bus text-primary"
+                    ></i>
+                    {% elif cat == '学习' %}<i
+                      class="fas fa-book text-info"
+                    ></i>
+                    {% elif cat == '娱乐' %}<i
+                      class="fas fa-film text-warning"
+                    ></i>
+                    {% elif cat == '社交' %}<i
+                      class="fas fa-users text-danger"
+                    ></i>
+                    {% else %}<i class="fas fa-shopping-cart text-secondary"></i
+                    >{% endif %} {{ cat }} 板块预算 (元)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="budget_{{ cat }}"
+                    class="form-control budget-input rounded-pill"
+                    value="{{ budget_dict.get(cat, 0) }}"
+                    data-cat="{{ cat }}"
+                  />
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+            <button
+              type="submit"
+              class="btn btn-success btn-lg rounded-pill px-5 shadow-sm"
+              id="saveBtn"
+            >
+              <i class="fas fa-save me-2"></i>保存预算计划
+            </button>
+            <a
+              href="{{ url_for('dashboard') }}"
+              class="btn btn-outline-secondary btn-lg rounded-pill px-4"
+            >
+              <i class="fas fa-chart-line me-2"></i>返回仪表板
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-4 border-0 bg-warning bg-opacity-10 rounded-4">
+      <div class="card-body">
+        <i class="fas fa-lightbulb text-warning me-2"></i>
+        小贴士：各板块预算是根据你的可支配收入动态建议的，你可以根据实际需求微调。<strong>各板块预算总和不能超过可支配收入</strong>，系统将根据预算和实际消费生成补偿计划，帮你更好控制开支。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 获取元素
+  const incomeInput = document.getElementById("monthly_income");
+  const savingsInput = document.getElementById("savings_goal");
+  const disposableSpan = document.getElementById("disposableAmount");
+  const budgetInputs = document.querySelectorAll(".budget-input");
+  const saveBtn = document.getElementById("saveBtn");
+  const form = document.getElementById("budgetForm");
+
+  // 计算可支配收入
+  function calculateDisposable() {
+    let income = parseFloat(incomeInput.value) || 0;
+    let savings = parseFloat(savingsInput.value) || 0;
+    let disposable = income - savings;
+    if (disposable < 0) disposable = 0;
+    disposableSpan.innerText = disposable.toFixed(2);
+    return disposable;
+  }
+
+  // 计算当前各板块预算总和
+  function getTotalBudget() {
+    let total = 0;
+    budgetInputs.forEach((input) => {
+      let val = parseFloat(input.value) || 0;
+      total += val;
+    });
+    return total;
+  }
+
+  // 校验并更新界面提示
+  function validateBudgets() {
+    let disposable = calculateDisposable();
+    let total = getTotalBudget();
+    let isOver = total > disposable;
+
+    // 修改预算卡片样式和保存按钮状态
+    if (isOver) {
+      saveBtn.disabled = true;
+      saveBtn.classList.add("btn-secondary");
+      saveBtn.classList.remove("btn-success");
+      // 显示错误提示，如果没有则添加
+      let errorDiv = document.getElementById("budgetError");
+      if (!errorDiv) {
+        errorDiv = document.createElement("div");
+        errorDiv.id = "budgetError";
+        errorDiv.className = "alert alert-danger mt-3 rounded-4";
+        errorDiv.innerHTML =
+          '<i class="fas fa-exclamation-triangle me-2"></i><strong>预算总和超支！</strong> 当前预算总和为 ' +
+          total.toFixed(2) +
+          " 元，超过了可支配收入 " +
+          disposable.toFixed(2) +
+          " 元。请减少预算分配。";
+        form.insertBefore(errorDiv, form.querySelector(".d-grid"));
+      } else {
+        errorDiv.innerHTML =
+          '<i class="fas fa-exclamation-triangle me-2"></i><strong>预算总和超支！</strong> 当前预算总和为 ' +
+          total.toFixed(2) +
+          " 元，超过了可支配收入 " +
+          disposable.toFixed(2) +
+          " 元。请减少预算分配。";
+      }
+    } else {
+      saveBtn.disabled = false;
+      saveBtn.classList.add("btn-success");
+      saveBtn.classList.remove("btn-secondary");
+      let errorDiv = document.getElementById("budgetError");
+      if (errorDiv) errorDiv.remove();
+    }
+
+    // 在每个输入框附近显示是否超支标记（可选）
+    budgetInputs.forEach((input) => {
+      let card = input.closest(".budget-card");
+      if (total > disposable) {
+        card.style.border = "2px solid #dc3545";
+      } else {
+        card.style.border = "none";
+        card.style.boxShadow = "0 0.125rem 0.25rem rgba(0,0,0,0.075)";
+      }
+    });
+  }
+
+  // 监听收入、储蓄变化
+  incomeInput.addEventListener("input", function () {
+    calculateDisposable();
+    validateBudgets();
+  });
+  savingsInput.addEventListener("input", function () {
+    calculateDisposable();
+    validateBudgets();
+  });
+
+  // 监听每个预算输入变化
+  budgetInputs.forEach((input) => {
+    input.addEventListener("input", function () {
+      validateBudgets();
+    });
+  });
+
+  // 表单提交前再次验证（防御）
+  form.addEventListener("submit", function (e) {
+    let disposable = calculateDisposable();
+    let total = getTotalBudget();
+    if (total > disposable) {
+      e.preventDefault();
+      alert("预算总和超过可支配收入，请调整后再保存！");
+      return false;
+    }
+  });
+
+  // 页面加载后执行一次校验
+  window.addEventListener("DOMContentLoaded", function () {
+    calculateDisposable();
+    validateBudgets();
+  });
+</script>
+
+<style>
+  /* 额外样式增强清新活力感 */
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #20bf55 0%, #01baef 100%);
+  }
+  .budget-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .budget-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  .rounded-pill {
+    border-radius: 50rem !important;
+  }
+  .form-control:focus {
+    border-color: #20bf55;
+    box-shadow: 0 0 0 0.2rem rgba(32, 191, 85, 0.25);
+  }
+  .btn-success {
+    background: linear-gradient(135deg, #20bf55, #16a34a);
+    border: none;
+  }
+  .btn-success:hover {
+    background: linear-gradient(135deg, #16a34a, #0e8a3c);
+    transform: scale(1.02);
+    transition: all 0.2s;
+  }
+  .btn-outline-secondary {
+    border-width: 2px;
+  }
+  .btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: white;
+    transform: scale(1.02);
+  }
+  .alert-primary {
+    background: linear-gradient(120deg, #e0f2fe, #bae6fd);
+    border: none;
+    color: #0c4a6e;
+  }
+  .bg-warning.bg-opacity-10 {
+    background-color: rgba(245, 158, 11, 0.1) !important;
+  }
+  .card {
+    transition: all 0.3s;
+  }
+</style>
+{% endblock %}

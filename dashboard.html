@@ -1,0 +1,144 @@
+{# templates/dashboard.html #} {% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header bg-white">
+        <h5><i class="fas fa-tachometer-alt"></i> 财务概览</h5>
+        <p>
+          月收入: <strong>{{ user.monthly_income }} 元</strong> | 计划存钱:
+          <strong>{{ user.savings_goal }} 元</strong> | 可支配消费总额:
+          <strong>{{ disposable_income }} 元</strong>
+        </p>
+        <p>
+          当前总消费: <strong>{{ total_expense }} 元</strong> / 总预算: {{
+          total_budget }} 元
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 消费板块进度 -->
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-chart-pie"></i> 各板块消费计划与执行情况
+      </div>
+      <div class="card-body">
+        {% for cat in categories_data %}
+        <div
+          class="budget-item"
+          style="border-left-color: {% if cat.over > 0 %}#dc3545{% else %}#28a745{% endif %};"
+        >
+          <div class="d-flex justify-content-between">
+            <strong>{{ cat.name }}</strong>
+            <span>已用 {{ cat.spent }} / 预算 {{ cat.budget }}</span>
+            {% if cat.over > 0 %}
+            <span class="text-danger">超支 {{ cat.over }}</span>
+            {% endif %}
+          </div>
+          <div class="progress mt-1">
+            <div
+              class="progress-bar bg-{{ cat.status }}"
+              role="progressbar"
+              style="width: {{ cat.percent }}%"
+            ></div>
+          </div>
+          <div class="small mt-1">
+            {% if cat.name == '饮食' %}💡 建议：自己做饭优先，减少外卖。 {% elif
+            cat.name == '交通' %}💡 建议：公交地铁为主，适当骑行。 {% elif
+            cat.name == '学习' %}💡 建议：利用免费资源，购买实用课程。 {% elif
+            cat.name == '娱乐' %}💡 建议：适度娱乐，尝试免费活动。 {% elif
+            cat.name == '社交' %}💡 建议：聚餐AA制，控制频率。 {% else %}💡
+            建议：列购物清单，避免囤积。 {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 补偿计划区域 -->
+    <div class="card mt-3">
+      <div class="card-header bg-warning text-dark">
+        <i class="fas fa-exclamation-triangle"></i> 补偿计划（超支应对）
+      </div>
+      <div class="card-body">
+        {% if compensation_plan %} {% for line in compensation_plan %}
+        <p class="mb-1">{{ line|safe }}</p>
+        {% endfor %} {% else %}
+        <p>暂无超支，继续保持！</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧：记录消费和消费记录 -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header bg-info text-white">
+        <i class="fas fa-plus-circle"></i> 记录消费
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('add_expense') }}">
+          <div class="mb-2">
+            <select name="category" class="form-select" required>
+              <option value="">选择板块</option>
+              {% for cat in categories_data %}
+              <option value="{{ cat.name }}">{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-2">
+            <input
+              type="number"
+              step="0.01"
+              name="amount"
+              class="form-control"
+              placeholder="消费金额"
+              required
+            />
+          </div>
+          <div class="mb-2">
+            <input
+              type="text"
+              name="description"
+              class="form-control"
+              placeholder="备注 (可选)"
+            />
+          </div>
+          <button type="submit" class="btn btn-primary w-100">添加消费</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header"><i class="fas fa-list"></i> 最近消费记录</div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for expense in recent_expenses %}
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center"
+          >
+            <div>
+              <strong>{{ expense.category }}</strong> {{ expense.amount }} 元<br />
+              <small class="text-muted"
+                >{{ expense.date }} {{ expense.description }}</small
+              >
+            </div>
+            <a
+              href="{{ url_for('delete_expense', expense_id=expense.id) }}"
+              class="btn btn-sm btn-outline-danger"
+              onclick="return confirm('删除此记录？')"
+              ><i class="fas fa-trash"></i
+            ></a>
+          </li>
+          {% else %}
+          <li class="list-group-item text-muted">暂无消费记录，点击上方添加</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
